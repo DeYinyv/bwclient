@@ -58,10 +58,10 @@ jobs:
           New-Item -ItemType Directory -Path dist | Out-Null
           Copy-Item "target/release/$env:CRATE_NAME.exe" "dist/$env:CRATE_NAME.exe"
           Compress-Archive -Path dist/* -DestinationPath "$name.zip"
-          Write-Output "ASSET_PATH=$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Output "ASSET_PATHS=$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Prepare artifact (macOS/Linux)
-        if: matrix.os != 'windows-latest'
+      - name: Prepare artifact (Linux)
+        if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
           set -euo pipefail
@@ -74,19 +74,68 @@ jobs:
           mkdir -p dist
           cp "target/release/$CRATE_NAME" dist/
           tar -czf "$name.tar.gz" -C dist .
-          echo "ASSET_PATH=$name.tar.gz" >> "$GITHUB_ENV"
+          echo "ASSET_PATHS=$name.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Prepare artifact (macOS .app bundle)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            version="${GITHUB_REF#refs/tags/}"
+          else
+            version="${{ github.run_number }}"
+          fi
+          name="$CRATE_NAME-$version-macos-${{ runner.arch }}"
+          APP="$CRATE_NAME.app"
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          cp "target/release/$CRATE_NAME" "$APP/Contents/MacOS/$CRATE_NAME"
+          chmod +x "$APP/Contents/MacOS/$CRATE_NAME"
+          # generate Info.plist from template if present
+          if [ -f "assets/macos/Info.plist.template" ]; then
+            sed -e "s|__BUNDLE_ID__|com.hkwk.$CRATE_NAME|g" -e "s|__VERSION__|$version|g" assets/macos/Info.plist.template > "$APP/Contents/Info.plist"
+          else
+            cat > "$APP/Contents/Info.plist" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>__NAME__</string>
+  <key>CFBundleIdentifier</key><string>com.hkwk.__NAME__</string>
+  <key>CFBundleVersion</key><string>__VERSION__</string>
+  <key>CFBundleExecutable</key><string>__EXEC__</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+</dict>
+</plist>
+EOF
+            sed -i "s|__NAME__|$CRATE_NAME|g" "$APP/Contents/Info.plist"
+            sed -i "s|__VERSION__|$version|g" "$APP/Contents/Info.plist"
+            sed -i "s|__EXEC__|$CRATE_NAME|g" "$APP/Contents/Info.plist"
+          fi
+          # include icon if provided
+          if [ -f "icons/$CRATE_NAME.icns" ]; then
+            cp "icons/$CRATE_NAME.icns" "$APP/Contents/Resources/$CRATE_NAME.icns"
+          fi
+          # create zip
+          zip -r "$name.zip" "$APP"
+          # create dmg (macOS only)
+          hdiutil create -volname "$CRATE_NAME" -srcfolder "$APP" -ov -format UDZO "$name.dmg"
+          echo "ASSET_PATHS=$name.zip $name.dmg" >> "$GITHUB_ENV"
+
+      - name: List generated artifacts
+        run: ls -la
 
       - name: Upload artifact to workflow (debug)
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ASSET_PATH }}
-          path: ${{ env.ASSET_PATH }}
+          name: build-assets
+          path: "**/*.{zip,tar.gz,dmg}"
 
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ASSET_PATH }}
+          files: ${{ env.ASSET_PATHS }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
