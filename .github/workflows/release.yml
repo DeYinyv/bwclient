@@ -110,20 +110,32 @@ jobs:
           hdiutil create -volname "$CRATE_NAME" -srcfolder "$APP" -ov -format UDZO "$name.dmg"
           echo "ASSET_PATHS=$name.zip $name.dmg" >> "$GITHUB_ENV"
 
-      - name: List generated artifacts
+      - name: List generated artifacts (macOS/Linux)
+        if: matrix.os != 'windows-latest'
         run: ls -la
+
+      - name: List generated artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: Get-ChildItem -Force -Recurse | Where-Object { $_.PSIsContainer -eq $false } | Sort-Object FullName | Format-Table FullName, Length
 
       - name: Upload artifact to workflow (debug)
         uses: actions/upload-artifact@v4
         with:
           name: build-assets
-          path: "**/*.{zip,tar.gz,dmg}"
+          path: |
+            **/*.zip
+            **/*.tar.gz
+            **/*.dmg
 
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ASSET_PATHS }}
+          files: |
+            **/bwclient-*.zip
+            **/bwclient-*.tar.gz
+            **/bwclient-*.dmg
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
