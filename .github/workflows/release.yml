@@ -95,19 +95,7 @@ jobs:
           if [ -f "assets/macos/Info.plist.template" ]; then
             sed -e "s|__BUNDLE_ID__|com.hkwk.$CRATE_NAME|g" -e "s|__VERSION__|$version|g" assets/macos/Info.plist.template > "$APP/Contents/Info.plist"
           else
-            cat > "$APP/Contents/Info.plist" <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>CFBundleName</key><string>__NAME__</string>
-  <key>CFBundleIdentifier</key><string>com.hkwk.__NAME__</string>
-  <key>CFBundleVersion</key><string>__VERSION__</string>
-  <key>CFBundleExecutable</key><string>__EXEC__</string>
-  <key>CFBundlePackageType</key><string>APPL</string>
-</dict>
-</plist>
-EOF
+            printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' '<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' '<plist version="1.0">' '<dict>' '  <key>CFBundleName</key><string>__NAME__</string>' '  <key>CFBundleIdentifier</key><string>com.hkwk.__NAME__</string>' '  <key>CFBundleVersion</key><string>__VERSION__</string>' '  <key>CFBundleExecutable</key><string>__EXEC__</string>' '  <key>CFBundlePackageType</key><string>APPL</string>' '</dict>' '</plist>' > "$APP/Contents/Info.plist"
             sed -i "s|__NAME__|$CRATE_NAME|g" "$APP/Contents/Info.plist"
             sed -i "s|__VERSION__|$version|g" "$APP/Contents/Info.plist"
             sed -i "s|__EXEC__|$CRATE_NAME|g" "$APP/Contents/Info.plist"
