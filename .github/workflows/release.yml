@@ -83,24 +83,25 @@ jobs:
             install -m 755 "dist/$CRATE_NAME" "$APP_DIR/MacOS/$CRATE_NAME"
 
             # Basic Info.plist
-            cat > "$APP_DIR/Info.plist" <<'PLIST'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>CFBundleExecutable</key>
-  <string>bwclient</string>
-  <key>CFBundleIdentifier</key>
-  <string>com.example.bwclient</string>
-  <key>CFBundleName</key>
-  <string>bwclient</string>
-  <key>CFBundleVersion</key>
-  <string>${version}</string>
-  <key>CFBundlePackageType</key>
-  <string>APPL</string>
-</dict>
-</plist>
-PLIST
+            # write a minimal Info.plist (avoid heredoc to keep YAML happy)
+            printf '%s\n' \
+              '<?xml version="1.0" encoding="UTF-8"?>' \
+              '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+              '<plist version="1.0">' \
+              '<dict>' \
+              '  <key>CFBundleExecutable</key>' \
+              "  <string>$CRATE_NAME</string>" \
+              '  <key>CFBundleIdentifier</key>' \
+              "  <string>com.example.$CRATE_NAME</string>" \
+              '  <key>CFBundleName</key>' \
+              "  <string>$CRATE_NAME</string>" \
+              '  <key>CFBundleVersion</key>' \
+              "  <string>$version</string>" \
+              '  <key>CFBundlePackageType</key>' \
+              '  <string>APPL</string>' \
+              '</dict>' \
+              '</plist>' \
+              > "$APP_DIR/Info.plist"
 
             # Optionally, add an icon if present
             if [[ -f "icons/app.icns" ]]; then
