@@ -14,7 +14,7 @@ hkdf = "0.12"
 aes = "0.8"
 cbc = "0.1"
 block-padding = "0.3"
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "native-tls"] }
+
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
@@ -24,6 +24,22 @@ sha2 = "0.10"
 rand = "0.8"
 sha1 = "0.10"
 
-[build-dependencies]
+[target.'cfg(target_os = "linux")'.dependencies]
+iced = { version = "0.14", default-features = false, features = ["x11"] }
+
+# Reqwest TLS selection per-OS:
+# - Windows: SChannel (native-tls) to avoid rustls/ring toolchain issues on windows-gnu.
+# - macOS: SecureTransport (native-tls) uses the system trust store.
+# - Others (Linux): rustls.
+[target.'cfg(windows)'.dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "native-tls"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "native-tls"] }
+
+[target.'cfg(all(not(windows), not(target_os = "macos")))'.dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+
+[target.'cfg(windows)'.build-dependencies]
 winres = "0.1"
 
