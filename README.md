@@ -8,7 +8,7 @@
 - GUI: Based on `iced`, basic interface framework implemented (`iced_app.rs`, `view.rs`).
 - Functional Modules: Includes main modules such as `api`, `totp`, `password_generator`, `crypto`, etc.
 - Platforms: Supports compilation and packaging for Windows / macOS / Linux in workflows (Release workflow triggers when tagging and attaches binaries to GitHub Release).
-- macOS: Workflow generates `.app` + `.dmg` (double-click to run).
+- macOS: Workflow generates `.app` + `.dmg` (double-click to run). may need with `sudo xattr -cr bwclient.app`
 
 ## Basic Usage (Development / Local Build)
 - Development Run (Debug):
