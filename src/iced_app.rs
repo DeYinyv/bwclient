@@ -923,6 +923,30 @@ impl BwClientIcedApp {
         exe.parent().map(|p| p.to_path_buf())
     }
 
+    fn write_private_file(path: &std::path::Path, content: &str) -> std::io::Result<()> {
+        #[cfg(unix)]
+        {
+            use std::fs::OpenOptions;
+            use std::io::Write;
+            use std::os::unix::fs::OpenOptionsExt;
+
+            let mut f = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(path)?;
+            f.write_all(content.as_bytes())?;
+            f.flush()?;
+            Ok(())
+        }
+
+        #[cfg(not(unix))]
+        {
+            std::fs::write(path, content)
+        }
+    }
+
     fn session_path() -> PathBuf {
         if let Some(dir) = Self::exe_dir() {
             return dir.join("session.json");
@@ -969,7 +993,7 @@ impl BwClientIcedApp {
         let Ok(json) = serde_json::to_string_pretty(&settings) else {
             return;
         };
-        let _ = std::fs::write(path, json);
+        let _ = Self::write_private_file(&path, &json);
     }
 
     fn load_persisted_data_encrypted() -> Option<String> {
@@ -1026,14 +1050,14 @@ impl BwClientIcedApp {
         };
 
         let path = Self::data_path();
-        if std::fs::write(&path, &json).is_ok() {
+        if Self::write_private_file(&path, &json).is_ok() {
             return;
         }
         let fallback = std::env::current_dir()
             .unwrap_or_else(|_| PathBuf::from("."))
             .join("data.json");
         if fallback != path {
-            let _ = std::fs::write(fallback, json);
+            let _ = Self::write_private_file(&fallback, &json);
         }
     }
 
@@ -1159,14 +1183,14 @@ impl BwClientIcedApp {
             return;
         };
 
-        if std::fs::write(&path, &json).is_ok() {
+        if Self::write_private_file(&path, &json).is_ok() {
             return;
         }
         let fallback = std::env::current_dir()
             .unwrap_or_else(|_| PathBuf::from("."))
             .join("session.json");
         if fallback != path {
-            let _ = std::fs::write(fallback, json);
+            let _ = Self::write_private_file(&fallback, &json);
         }
     }
 
